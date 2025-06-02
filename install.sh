@@ -1,21 +1,32 @@
 #!/bin/bash
 
+# update package list
+apt-get update
+
+# Install ZSH
+apt-get install --no-install-recommends -y \
+    zsh
+
+# Set default shell to zsh
+export SHELL=/usr/bin/zsh
+zsh && chsh -s /bin/zsh
+
 # Install ZSH Plugins
 mkdir -p ~/.zsh
 
-# Install zsh-autosuggestions
+## Install zsh-autosuggestions
 git clone \
     https://github.com/zsh-users/zsh-autosuggestions ~/.zsh/zsh-autosuggestions
 
-# Install zsh-syntax-highlighting
+## Install zsh-syntax-highlighting
 git clone \
     https://github.com/zsh-users/zsh-syntax-highlighting.git ~/.zsh/zsh-syntax-highlighting
 
-# Install zsh-completions
+## Install zsh-completions
 git clone \
     https://github.com/zsh-users/zsh-completions.git ~/.zsh/zsh-completions
 
-# Install git-prompt
+## Install git-prompt
 curl -o \
     ~/.zsh/git-prompt.sh https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh
 
@@ -30,3 +41,8 @@ apt-get install -y \
     && apt-get update \
     && apt-get install --no-install-recommends -y \
     eza
+
+
+# Cleanup apt cache
+apt-get clean \
+    && rm -rf /var/lib/apt/lists/*

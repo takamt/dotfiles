@@ -1,48 +1,291 @@
-#!/bin/bash
+#!/bin/sh
 
-# update package list
-apt-get update
+# Dotfiles installation script
+# This script creates symbolic links from dotfiles to the home directory
+# and backs up existing files to prevent data loss
+# Compatible with POSIX sh
 
-# Install ZSH
-apt-get install --no-install-recommends -y \
-    zsh
+set -eu
 
-# Set default shell to zsh
-export SHELL=/usr/bin/zsh
-zsh && chsh -s /bin/zsh
+readonly SCRIPT_NAME="$(basename "$0")"
+readonly DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
+readonly BACKUP_DIR="$HOME/.dotbackup"
 
-# Install ZSH Plugins
-mkdir -p ~/.zsh
+# Display usage information
+show_help() {
+    cat << EOF
+Usage: $SCRIPT_NAME [OPTIONS]
 
-## Install zsh-autosuggestions
-git clone \
-    https://github.com/zsh-users/zsh-autosuggestions ~/.zsh/zsh-autosuggestions
+Install dotfiles by creating symbolic links in the home directory.
 
-## Install zsh-syntax-highlighting
-git clone \
-    https://github.com/zsh-users/zsh-syntax-highlighting.git ~/.zsh/zsh-syntax-highlighting
+OPTIONS:
+    -h, --help     Show this help message and exit
+    -d, --debug    Enable debug mode (verbose output)
 
-## Install zsh-completions
-git clone \
-    https://github.com/zsh-users/zsh-completions.git ~/.zsh/zsh-completions
+DESCRIPTION:
+    This script will:
+    1. Create a backup directory (~/.dotbackup) if it doesn't exist
+    2. Back up existing dotfiles to the backup directory
+    3. Create symbolic links from dotfiles to the home directory
+    4. Handle nested directory structures (e.g., .config/)
+    5. Execute all .sh files in the scripts/ directory
 
-## Install git-prompt
-curl -o \
-    ~/.zsh/git-prompt.sh https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh
+STRUCTURE:
+    This script expects the following dotfiles structure:
+    dotfiles/
+    ├── install.sh (this script)
+    ├── .config/
+    └── scripts/
 
+EOF
+}
 
-# Install eza instead of ls
-apt-get install -y \
-    gpg \
-    && mkdir -p /etc/apt/keyrings \
-    && wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | gpg --dearmor -o /etc/apt/keyrings/gierens.gpg \
-    && echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | tee /etc/apt/sources.list.d/gierens.list \
-    && chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list \
-    && apt-get update \
-    && apt-get install --no-install-recommends -y \
-    eza
+# Create backup directory if it doesn't exist
+create_backup_dir() {
+    if [ ! -d "$BACKUP_DIR" ]; then
+        echo "Creating backup directory: $BACKUP_DIR"
+        mkdir -p "$BACKUP_DIR"
+    fi
+}
 
+# Create directory structure if it doesn't exist
+ensure_directory() {
+    target_dir="$1"
+    if [ ! -d "$target_dir" ]; then
+        echo "Creating directory: $target_dir"
+        mkdir -p "$target_dir"
+    fi
+}
 
-# Cleanup apt cache
-apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Back up existing file or directory to backup directory
+backup_existing_item() {
+    item_path="$1"
+    relative_path="$2"  # Path relative to HOME
+    
+    if [ -e "$item_path" ] && [ ! -L "$item_path" ]; then
+        backup_target="$BACKUP_DIR/$relative_path"
+        backup_dir="$(dirname "$backup_target")"
+        
+        echo "Backing up existing item: $relative_path"
+        ensure_directory "$backup_dir"
+        mv "$item_path" "$backup_target"
+    elif [ -L "$item_path" ]; then
+        echo "Removing existing symlink: $relative_path"
+        rm -f "$item_path"
+    fi
+}
+
+# Create symbolic link with proper directory structure
+create_symlink_with_dirs() {
+    source_path="$1"
+    target_path="$2"
+    relative_path="$3"  # Path relative to HOME for display
+    
+    # Ensure target directory exists
+    target_dir="$(dirname "$target_path")"
+    ensure_directory "$target_dir"
+    
+    # Backup existing item
+    backup_existing_item "$target_path" "$relative_path"
+    
+    echo "Creating symlink: $relative_path"
+    ln -sf "$source_path" "$target_path"
+}
+
+# Check if a file/directory should be skipped
+should_skip_item() {
+    item_name="$1"
+    case "$item_name" in
+        install.sh|scripts|.git|.gitignore|.DS_Store|README*|LICENSE*)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# Recursively process directory contents
+process_directory() {
+    source_dir="$1"
+    target_base="$2"
+    relative_base="$3"
+    
+    # Process all items in the directory
+    for item in "$source_dir"/*; do
+        # Skip if glob doesn't match
+        [ ! -e "$item" ] && continue
+        
+        item_name="$(basename "$item")"
+        
+        # Skip unwanted items
+        if should_skip_item "$item_name"; then
+            echo "Skipping: $relative_base$item_name"
+            continue
+        fi
+        
+        target_path="$target_base/$item_name"
+        relative_path="$relative_base$item_name"
+        
+        if [ -d "$item" ]; then
+            echo "Processing directory: $relative_path/"
+            # Recursively process subdirectory
+            process_directory "$item" "$target_path" "$relative_path/"
+        else
+            # Create symlink for file
+            create_symlink_with_dirs "$item" "$target_path" "$relative_path"
+        fi
+    done
+    
+    # Also process hidden files/directories
+    for item in "$source_dir"/.??*; do
+        # Skip if glob doesn't match
+        [ ! -e "$item" ] && continue
+        
+        item_name="$(basename "$item")"
+        
+        # Skip unwanted items
+        if should_skip_item "$item_name"; then
+            echo "Skipping: $relative_base$item_name"
+            continue
+        fi
+        
+        target_path="$target_base/$item_name"
+        relative_path="$relative_base$item_name"
+        
+        if [ -d "$item" ]; then
+            echo "Processing hidden directory: $relative_path/"
+            # Recursively process subdirectory
+            process_directory "$item" "$target_path" "$relative_path/"
+        else
+            # Create symlink for hidden file
+            create_symlink_with_dirs "$item" "$target_path" "$relative_path"
+        fi
+    done
+}
+
+# Main function to link dotfiles to home directory
+link_dotfiles_to_home() {    
+    echo "Dotfiles directory: $DOTFILES_DIR"
+    echo "Target directory: $HOME"
+    
+    # Prevent linking if dotfiles are already in home directory
+    if [ "$HOME" = "$DOTFILES_DIR" ]; then
+        echo "Warning: Dotfiles directory is the same as home directory. Skipping symlink creation."
+        return 0
+    fi
+    
+    echo "Starting dotfiles installation..."
+    create_backup_dir
+    
+    # Process the dotfiles directory
+    process_directory "$DOTFILES_DIR" "$HOME" ""
+    
+    echo "Dotfiles installation completed"
+}
+
+# Execute scripts in the scripts directory
+execute_scripts() {
+    scripts_dir="$DOTFILES_DIR/scripts"
+    
+    # Check if scripts directory exists
+    if [ ! -d "$scripts_dir" ]; then
+        echo "No scripts directory found, skipping script execution"
+        return 0
+    fi
+    
+    echo "Executing scripts from: $scripts_dir"
+    
+    # Find and execute all .sh files in scripts directory
+    script_count=0
+    for script_file in "$scripts_dir"/*.sh; do
+        # Skip if glob doesn't match
+        [ ! -f "$script_file" ] && continue
+        
+        script_name="$(basename "$script_file")"
+        echo "Executing script: $script_name"
+        
+        # Make script executable if it isn't already
+        if [ ! -x "$script_file" ]; then
+            echo "Making $script_name executable"
+            chmod +x "$script_file"
+        fi
+        
+        # Execute the script
+        if "$script_file"; then
+            echo "✓ Successfully executed: $script_name"
+            script_count=$((script_count + 1))
+        else
+            echo "✗ Failed to execute: $script_name" >&2
+            echo "Warning: Script execution failed, but continuing installation" >&2
+        fi
+        echo ""
+    done
+    
+    if [ $script_count -gt 0 ]; then
+        echo "Executed $script_count script(s) successfully"
+    else
+        echo "No executable scripts found in scripts directory"
+    fi
+}
+
+# Check if current shell supports specific features
+check_shell_capabilities() {
+    # Test for debug mode support
+    if [ "${DEBUG_MODE:-}" = "1" ]; then
+        # Try to enable debug mode if supported
+        if (set -x) 2>/dev/null; then
+            set -x
+        else
+            echo "Warning: Debug mode not fully supported in this shell"
+        fi
+    fi
+}
+
+# Main execution
+main() {
+    # Parse command line arguments
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            -d|--debug)
+                echo "Debug mode enabled"
+                DEBUG_MODE=1
+                check_shell_capabilities
+                ;;
+            -*)
+                echo "Error: Unknown option '$1'" >&2
+                echo "Use '$SCRIPT_NAME --help' for usage information." >&2
+                exit 1
+                ;;
+            *)
+                echo "Error: Unexpected argument '$1'" >&2
+                echo "Use '$SCRIPT_NAME --help' for usage information." >&2
+                exit 1
+                ;;
+        esac
+        shift
+    done
+    
+    # Execute main installation steps
+    link_dotfiles_to_home
+    execute_scripts
+    
+    # Success message with colored output (if supported)
+    if [ -t 1 ] && command -v tput >/dev/null 2>&1 && tput colors >/dev/null 2>&1; then
+        # Terminal supports colors
+        echo ""
+        echo "$(tput setaf 2)$(tput bold)✓ Dotfiles installation completed successfully!$(tput sgr0)"
+    else
+        # Fallback for terminals without color support
+        echo ""
+        echo "✓ Dotfiles installation completed successfully!"
+    fi
+    echo "Backup files are stored in: $BACKUP_DIR"
+}
+
+# Execute main function with all arguments
+main "$@"

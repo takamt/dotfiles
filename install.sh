@@ -105,62 +105,50 @@ should_skip_item() {
     esac
 }
 
+# Process a single item (file or directory)
+process_item() {
+    item="$1"
+    target_base="$2"
+    relative_base="$3"
+    
+    # Skip if item doesn't exist
+    [ ! -e "$item" ] && return 0
+    
+    item_name="$(basename "$item")"
+    
+    # Skip unwanted items
+    if should_skip_item "$item_name"; then
+        echo "Skipping: $relative_base$item_name"
+        return 0
+    fi
+    
+    target_path="$target_base/$item_name"
+    relative_path="$relative_base$item_name"
+    
+    if [ -d "$item" ]; then
+        echo "Processing directory: $relative_path/"
+        # Recursively process subdirectory
+        process_directory "$item" "$target_path" "$relative_path/"
+    else
+        # Create symlink for file
+        create_symlink_with_dirs "$item" "$target_path" "$relative_path"
+    fi
+}
+
 # Recursively process directory contents
 process_directory() {
     source_dir="$1"
     target_base="$2"
     relative_base="$3"
     
-    # Process all items in the directory
+    # Process all items in the directory (non-hidden)
     for item in "$source_dir"/*; do
-        # Skip if glob doesn't match
-        [ ! -e "$item" ] && continue
-        
-        item_name="$(basename "$item")"
-        
-        # Skip unwanted items
-        if should_skip_item "$item_name"; then
-            echo "Skipping: $relative_base$item_name"
-            continue
-        fi
-        
-        target_path="$target_base/$item_name"
-        relative_path="$relative_base$item_name"
-        
-        if [ -d "$item" ]; then
-            echo "Processing directory: $relative_path/"
-            # Recursively process subdirectory
-            process_directory "$item" "$target_path" "$relative_path/"
-        else
-            # Create symlink for file
-            create_symlink_with_dirs "$item" "$target_path" "$relative_path"
-        fi
+        process_item "$item" "$target_base" "$relative_base"
     done
     
-    # Also process hidden files/directories
+    # Process hidden files/directories
     for item in "$source_dir"/.??*; do
-        # Skip if glob doesn't match
-        [ ! -e "$item" ] && continue
-        
-        item_name="$(basename "$item")"
-        
-        # Skip unwanted items
-        if should_skip_item "$item_name"; then
-            echo "Skipping: $relative_base$item_name"
-            continue
-        fi
-        
-        target_path="$target_base/$item_name"
-        relative_path="$relative_base$item_name"
-        
-        if [ -d "$item" ]; then
-            echo "Processing hidden directory: $relative_path/"
-            # Recursively process subdirectory
-            process_directory "$item" "$target_path" "$relative_path/"
-        else
-            # Create symlink for hidden file
-            create_symlink_with_dirs "$item" "$target_path" "$relative_path"
-        fi
+        process_item "$item" "$target_base" "$relative_base"
     done
 }
 

@@ -63,7 +63,7 @@ backup_existing_item() {
     relative_path="$2"  # Path relative to HOME
     
     if [ -e "$item_path" ] && [ ! -L "$item_path" ]; then
-        backup_target="$BACKUP_DIR/$relative_path"
+        backup_target="$(join_paths "$BACKUP_DIR" "$relative_path")"
         backup_dir="$(dirname "$backup_target")"
         
         echo "Backing up existing item: $relative_path"
@@ -80,7 +80,8 @@ create_symlink_with_dirs() {
     source_path="$1"
     target_path="$2"
     relative_path="$3"  # Path relative to HOME for display
-    
+    echo "create_symlink_with_dirs - source_path: $source_path, target_path: $target_path, relative_path: $relative_path"
+
     # Ensure target directory exists
     target_dir="$(dirname "$target_path")"
     ensure_directory "$target_dir"
@@ -105,6 +106,35 @@ should_skip_item() {
     esac
 }
 
+# Normalize path by removing trailing slashes and ensuring proper format
+normalize_path() {
+    path="$1"
+    # Remove trailing slashes except for root directory
+    if [ "$path" != "/" ]; then
+        path="${path%/}"
+    fi
+    echo "$path"
+}
+
+# Join two paths safely, handling slashes properly
+join_paths() {
+    base="$1"
+    name="$2"
+    
+    # Normalize base path
+    base="$(normalize_path "$base")"
+    
+    # Remove leading slashes from name
+    name="${name#/}"
+    
+    # Join paths
+    if [ -z "$base" ] || [ "$base" = "/" ]; then
+        echo "/$name"
+    else
+        echo "$base/$name"
+    fi
+}
+
 # Process a single item (file or directory)
 process_item() {
     item="$1"
@@ -118,12 +148,13 @@ process_item() {
     
     # Skip unwanted items
     if should_skip_item "$item_name"; then
-        echo "Skipping: $relative_base$item_name"
+        echo "Skipping: $(join_paths "$relative_base" "$item_name")"
         return 0
     fi
     
-    target_path="$target_base/$item_name"
-    relative_path="$relative_base$item_name"
+    # Safely join paths
+    target_path="$(join_paths "$target_base" "$item_name")"
+    relative_path="$(join_paths "$relative_base" "$item_name")"
     
     if [ -d "$item" ]; then
         echo "Processing directory: $relative_path/"
@@ -174,7 +205,7 @@ link_dotfiles_to_home() {
 
 # Execute scripts in the scripts directory
 execute_scripts() {
-    scripts_dir="$DOTFILES_DIR/scripts"
+    scripts_dir="$(join_paths "$DOTFILES_DIR" "scripts")"
     
     # Check if scripts directory exists
     if [ ! -d "$scripts_dir" ]; then

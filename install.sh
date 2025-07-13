@@ -61,7 +61,7 @@ ensure_directory() {
 get_relative_path_from_home() {
     path="$1"
     # HOMEディレクトリからの相対パスを計算
-    relative_path="$(realpath --relative-to="$HOME" "$path")"
+    relative_path="$(realpath -m --relative-to="$HOME" "$path")"
     echo "$relative_path"
 }
 

@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # update package list
-apt-get update
+sudo apt-get update
 
 # Install ZSH
-apt-get install --no-install-recommends -y \
+sudo apt-get install --no-install-recommends -y \
     zsh
 
 # Set default shell to zsh
@@ -32,7 +32,7 @@ curl -o \
 
 
 # Install eza instead of ls
-apt-get install -y \
+sudo apt-get install -y \
     gpg \
     && mkdir -p /etc/apt/keyrings \
     && wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | gpg --dearmor -o /etc/apt/keyrings/gierens.gpg \
@@ -44,5 +44,5 @@ apt-get install -y \
 
 
 # Cleanup apt cache
-apt-get clean \
+sudo apt-get clean \
     && rm -rf /var/lib/apt/lists/*

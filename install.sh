@@ -168,6 +168,7 @@ link_dotfiles_process_item() {
     
     item_name="$(basename "$item")"
 
+    target_path="$(join_paths "$target_base" "$item_name")"
     relative_path="$(get_relative_path_from_home "$target_path")"
 
     # Skip unwanted items
@@ -175,7 +176,6 @@ link_dotfiles_process_item() {
         echo "Skipping: $relative_path"
         return 0
     fi
-    target_path="$(join_paths "$target_base" "$item_name")"
 
     if [ -d "$item" ]; then
         echo "Processing directory: $relative_path/"

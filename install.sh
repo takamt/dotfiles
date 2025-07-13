@@ -106,6 +106,19 @@ should_skip_item() {
     esac
 }
 
+# Check if a file/directory should be created as a symlink without directories
+should_create_symlink_without_dirs() {
+    item_name="$1"
+    case "$item_name" in
+        .bashrc|.zshrc)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 # Normalize path by removing trailing slashes and ensuring proper format
 normalize_path() {
     path="$1"
@@ -161,6 +174,9 @@ process_item() {
         # Recursively process subdirectory
         process_directory "$item" "$target_path" "$relative_path/"
     else
+        if should_create_symlink_without_dirs "$item_name"; then
+            target_path="$(join_paths "$HOME" "$item_name")"
+        fi
         # Create symlink for file
         create_symlink_with_dirs "$item" "$target_path" "$relative_path"
     fi

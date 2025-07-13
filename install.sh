@@ -57,11 +57,20 @@ ensure_directory() {
     fi
 }
 
+# Get relative path from target_path to HOME
+get_relative_path_from_home() {
+    path="$1"
+    # HOMEディレクトリからの相対パスを計算
+    relative_path="$(realpath --relative-to="$HOME" "$path")"
+    echo "$relative_path"
+}
+
 # Back up existing file or directory to backup directory
 backup_existing_item() {
     item_path="$1"
-    relative_path="$2"  # Path relative to HOME
     
+    relative_path="$(get_relative_path_from_home "$item_path")"
+
     if [ -e "$item_path" ] && [ ! -L "$item_path" ]; then
         backup_target="$(join_paths "$BACKUP_DIR" "$relative_path")"
         backup_dir="$(dirname "$backup_target")"
@@ -76,19 +85,19 @@ backup_existing_item() {
 }
 
 # Create symbolic link with proper directory structure
-create_symlink_with_dirs() {
+create_symlink() {
     source_path="$1"
     target_path="$2"
-    relative_path="$3"  # Path relative to HOME for display
-    echo "create_symlink_with_dirs - source_path: $source_path, target_path: $target_path, relative_path: $relative_path"
+    echo "...create_symlink - source_path: $source_path, target_path: $target_path"
 
     # Ensure target directory exists
     target_dir="$(dirname "$target_path")"
     ensure_directory "$target_dir"
     
     # Backup existing item
-    backup_existing_item "$target_path" "$relative_path"
+    backup_existing_item "$target_path"
     
+    relative_path="$(get_relative_path_from_home "$target_path")"
     echo "Creating symlink: $relative_path"
     ln -sf "$source_path" "$target_path"
 }
@@ -149,58 +158,57 @@ join_paths() {
 }
 
 # Process a single item (file or directory)
-process_item() {
+link_dotfiles_process_item() {
     item="$1"
     target_base="$2"
-    relative_base="$3"
+    echo "...link_dotfiles_process_item - item: $item, target_base: $target_base"
     
     # Skip if item doesn't exist
     [ ! -e "$item" ] && return 0
     
     item_name="$(basename "$item")"
-    
+
+    relative_path="$(get_relative_path_from_home "$target_path")"
+
     # Skip unwanted items
     if should_skip_item "$item_name"; then
-        echo "Skipping: $(join_paths "$relative_base" "$item_name")"
+        echo "Skipping: $relative_path"
         return 0
     fi
-    
-    # Safely join paths
     target_path="$(join_paths "$target_base" "$item_name")"
-    relative_path="$(join_paths "$relative_base" "$item_name")"
-    
+
     if [ -d "$item" ]; then
         echo "Processing directory: $relative_path/"
         # Recursively process subdirectory
-        process_directory "$item" "$target_path" "$relative_path/"
+        link_dotfiles_process_directory "$item" "$target_path"
     else
         if should_create_symlink_without_dirs "$item_name"; then
+            echo "Should create symlink without dirs: $item_name"
             target_path="$(join_paths "$HOME" "$item_name")"
         fi
         # Create symlink for file
-        create_symlink_with_dirs "$item" "$target_path" "$relative_path"
+        create_symlink "$item" "$target_path"
     fi
 }
 
 # Recursively process directory contents
-process_directory() {
+link_dotfiles_process_directory() {
     source_dir="$1"
     target_base="$2"
-    relative_base="$3"
     
     # Process all items in the directory (non-hidden)
     for item in "$source_dir"/*; do
-        process_item "$item" "$target_base" "$relative_base"
+        link_dotfiles_process_item "$item" "$target_base"
     done
     
     # Process hidden files/directories
     for item in "$source_dir"/.??*; do
-        process_item "$item" "$target_base" "$relative_base"
+        link_dotfiles_process_item "$item" "$target_base"
     done
 }
 
 # Main function to link dotfiles to home directory
-link_dotfiles_to_home() {    
+link_dotfiles() {    
     echo "Dotfiles directory: $DOTFILES_DIR"
     echo "Target directory: $HOME"
     
@@ -214,7 +222,7 @@ link_dotfiles_to_home() {
     create_backup_dir
     
     # Process the dotfiles directory
-    process_directory "$DOTFILES_DIR" "$HOME" ""
+    link_dotfiles_process_directory "$DOTFILES_DIR" "$HOME"
     
     echo "Dotfiles installation completed"
 }
@@ -306,7 +314,7 @@ main() {
     done
     
     # Execute main installation steps
-    link_dotfiles_to_home
+    link_dotfiles
     execute_scripts
     
     # Success message with colored output (if supported)

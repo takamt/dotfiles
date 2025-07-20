@@ -9,9 +9,6 @@ sudo apt-get update
 sudo apt-get install --no-install-recommends -y \
     zsh
 
-# Set default shell to zsh
-export SHELL=/usr/bin/zsh
-zsh && chsh -s /bin/zsh
 
 # Install ZSH Plugins
 echo "Installing ZSH Plugins started"
@@ -57,3 +54,7 @@ sudo apt-get clean \
 echo "Cleaning up apt cache completed"
 
 echo "ZSH installation completed"
+
+# Set default shell to zsh
+export SHELL=/usr/bin/zsh
+zsh && chsh -s /bin/zsh

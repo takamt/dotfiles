@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo "Starting ZSH installation"
+
 # update package list
 sudo apt-get update
 
@@ -12,6 +14,7 @@ export SHELL=/usr/bin/zsh
 zsh && chsh -s /bin/zsh
 
 # Install ZSH Plugins
+echo "Installing ZSH Plugins started"
 mkdir -p ~/.zsh
 
 ## Install zsh-autosuggestions
@@ -30,8 +33,10 @@ git clone \
 curl -o \
     ~/.zsh/git-prompt.sh https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh
 
+echo "Installing ZSH Plugins completed"
 
 # Install eza instead of ls
+echo "Installing eza started"
 sudo apt-get install -y \
     gpg \
     && sudo mkdir -p /etc/apt/keyrings \
@@ -42,7 +47,13 @@ sudo apt-get install -y \
     && sudo apt-get install --no-install-recommends -y \
     eza
 
+echo "Installing eza completed"
 
 # Cleanup apt cache
+echo "Cleaning up apt cache"
 sudo apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+echo "Cleaning up apt cache completed"
+
+echo "ZSH installation completed"

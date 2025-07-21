@@ -287,6 +287,10 @@ check_shell_capabilities() {
 
 # Main execution
 main() {
+
+    # Remove flag file if it exists
+    rm -f ~/.dotfiles-installed
+
     # Parse command line arguments
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -316,6 +320,9 @@ main() {
     # Execute main installation steps
     link_dotfiles
     execute_scripts
+
+    # Create flag file NOTE: 
+    touch ~/.dotfiles-installed
     
     # Success message with colored output (if supported)
     if [ -t 1 ] && command -v tput >/dev/null 2>&1 && tput colors >/dev/null 2>&1; then

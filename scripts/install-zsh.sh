@@ -2,6 +2,9 @@
 
 echo "Starting ZSH installation"
 
+# Remove flag file if it exists
+rm -f ~/.dotfiles-zsh-installed
+
 # update package list
 sudo apt-get update
 
@@ -57,6 +60,7 @@ echo "Cleaning up apt cache completed"
 export SHELL=/usr/bin/zsh
 sudo chsh -s /usr/bin/zsh && zsh
 
-echo "ZSH installation completed"
-
+# Create flag file NOTE: 
 touch ~/.dotfiles-zsh-installed
+
+echo "ZSH installation completed"

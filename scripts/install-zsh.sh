@@ -53,8 +53,10 @@ sudo apt-get clean \
 
 echo "Cleaning up apt cache completed"
 
-echo "ZSH installation completed"
-
 # Set default shell to zsh
 export SHELL=/usr/bin/zsh
 sudo chsh -s /usr/bin/zsh && zsh
+
+echo "ZSH installation completed"
+
+touch ~/.dotfiles-zsh-installed

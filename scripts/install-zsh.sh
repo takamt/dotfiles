@@ -55,6 +55,8 @@ echo "Cleaning up apt cache completed"
 
 # Set default shell to zsh
 export SHELL=/usr/bin/zsh
-sudo chsh -s /usr/bin/zsh && zsh
+sudo chsh -s /usr/bin/zsh
 
 echo "ZSH installation completed"
+
+# NOTE: Switching to the zsh shell should be handled by the caller.

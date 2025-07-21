@@ -57,4 +57,4 @@ echo "ZSH installation completed"
 
 # Set default shell to zsh
 export SHELL=/usr/bin/zsh
-zsh && chsh -s /bin/zsh
+zsh && chsh -s /usr/bin/zsh

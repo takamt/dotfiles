@@ -49,7 +49,7 @@ echo "Installing eza completed"
 # Cleanup apt cache
 echo "Cleaning up apt cache"
 sudo apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && sudo rm -rf /var/lib/apt/lists/*
 
 echo "Cleaning up apt cache completed"
 

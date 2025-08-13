@@ -119,7 +119,7 @@ should_skip_item() {
 should_create_symlink_without_dirs() {
     item_name="$1"
     case "$item_name" in
-        .bashrc|.zshrc)
+        .bashrc|.zshrc|.vimrc)
             return 0
             ;;
         *)

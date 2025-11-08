@@ -321,7 +321,8 @@ main() {
     link_dotfiles
     execute_scripts
 
-    # Create flag file NOTE: 
+    # Create flag file
+    # NOTE: To be used when it is necessary to determine whether installation is complete
     touch ~/.dotfiles-installed
     
     # Success message with colored output (if supported)

@@ -61,7 +61,22 @@ ensure_directory() {
 get_relative_path_from_home() {
     path="$1"
     # HOMEディレクトリからの相対パスを計算
-    relative_path="$(realpath -m --relative-to="$HOME" "$path")"
+    relative_path=""
+    case "$(uname -s)" in
+        Darwin)
+            # macOS
+            relative_path="$(grealpath -m --relative-to="$HOME" "$path")"
+            ;;
+        Linux)
+            # Linux
+            relative_path="$(realpath -m --relative-to="$HOME" "$path")"
+            ;;
+        *)
+            # the other OSes
+            echo "Not supported OS: $(uname -s)"
+            exit 1
+            ;;
+    esac
     echo "$relative_path"
 }
 

@@ -3,6 +3,7 @@
 ## basic
 typeset -U path PATH
 path=(
+  $path
   /usr/bin
   /usr/sbin
   /bin
